@@ -3,6 +3,10 @@
 
 #include "RoboticArm.h"
 
+#include "tiff.h"
+#include "Common/UdpSocketBuilder.h"
+
+
 // Sets default values
 ARoboticArm::ARoboticArm()
 {
@@ -13,6 +17,25 @@ ARoboticArm::ARoboticArm()
 // Called when the game starts or when spawned
 void ARoboticArm::BeginPlay()
 {
+	// Target each joint
+	Joints[0] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q1")));
+	Joints[1] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q2")));
+	Joints[2] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q3")));
+	Joints[3] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q4")));
+	Joints[4] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q5")));
+	Joints[5] = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("q6")));
+
+	for (const auto* Joint : Joints)
+	{
+		if (!Joint)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Could not find all 6 joints."));
+			return;
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("All joints found and targeted."));
+
 	InitializeSocket();
 	if (ListenerSocket)
 	{
@@ -23,7 +46,7 @@ void ARoboticArm::BeginPlay()
 void ARoboticArm::InitializeSocket()
 {
 	LocalIP = TEXT("127.0.0.1");
-	LocalPort = 40000;
+	LocalPort = 8500;
 	FIPv4Address IPv4Address;
 	FIPv4Address::Parse(LocalIP, IPv4Address);
 	ListenerSocket = FUdpSocketBuilder(TEXT("ListenerSocket"))
@@ -41,7 +64,7 @@ void ARoboticArm::InitializeSocket()
 	}
 }
 
-void ARoboticArm::ReadSocket()
+FString ARoboticArm::ReadSocket()
 {
 	TSharedRef<FInternetAddr> RemoteAddress = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->CreateInternetAddr();
 	uint32 Size;
@@ -53,27 +76,58 @@ void ARoboticArm::ReadSocket()
 
 		if (BytesRead > 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Received %d bytes of data: %p"), BytesRead,
-			       ReceivedData.GetData());
+			FString Data = FString(BytesRead, (char*)ReceivedData.GetData());
+			UE_LOG(LogTemp, Warning, TEXT("Received %d bytes of data: %s"), BytesRead,
+			       *Data);
+			return Data;
 		}
 	}
+	return FString();
+}
+
+
+ARoboticArm::Coordinates ARoboticArm::ParseCoordinates(FString stream)
+{
+	int32 OpenParenIdx = stream.Find(TEXT("("), ESearchCase::IgnoreCase, ESearchDir::FromStart,
+	                                 stream.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart) + 1);
+
+	// Get the index of the last close parenthesis
+	int32 CloseParenIdx = stream.Find(TEXT(")"), ESearchCase::IgnoreCase, ESearchDir::FromStart);
+
+	// Get the sub-string between the open and close parentheses
+	FString XYZString = stream.Mid(OpenParenIdx + 1, CloseParenIdx - OpenParenIdx - 1);
+
+	// Split the string on commas to get the x, y, and z values as separate strings
+	TArray<FString> XYZComponents;
+	XYZString.ParseIntoArray(XYZComponents, TEXT(","), true);
+
+	// Convert the strings to floats, convert from metres to cm
+	float X = FCString::Atof(*XYZComponents[0]) * 100;
+	float Y = FCString::Atof(*XYZComponents[1]) * 100;
+	float Z = FCString::Atof(*XYZComponents[2]) * 100;
+	Coordinates Coords = {X, Y, Z};
+	UE_LOG(LogTemp, Warning, TEXT("Parsed coordinates: %f %f %f"), X, Y, Z);
+	return Coords;
+}
+
+// ARoboticArm::JointAngles IKSolver(ARoboticArm::Coordinates coordinates)
+// {
+//}
+
+void ARoboticArm::RotateJoints(JointAngles angles)
+{
 }
 
 
 // Called every frame
 void ARoboticArm::Tick(float DeltaTime)
 {
-	UStaticMeshComponent* Test = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("p1_hinge")));
-	if (Test)
+	FString coordinates = ReadSocket();
+	if (coordinates != "")
 	{
-		FString ComponentName = Test->GetName();
-		FVector ForceDirection = FVector::BackwardVector * 100.0f;
-		Test->AddForce(ForceDirection);
+		Coordinates ParsedCoordinates = ParseCoordinates(coordinates);
+		//JointAngles SolvedAngles = IKSolver(ParsedCoordinates);
+		//RotateJoints(SolvedAngles);
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not find component"));
-	}
-	ReadSocket();
 	Super::Tick(DeltaTime);
 }

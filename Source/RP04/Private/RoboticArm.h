@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Common/UdpSocketBuilder.h"
 #include "GameFramework/Actor.h"
 #include "RoboticArm.generated.h"
 
@@ -24,6 +23,23 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	struct Coordinates
+	{
+		float X;
+		float Y;
+		float Z;
+	};
+
+	struct JointAngles
+	{
+		float Q1;
+		float Q2;
+		float Q3;
+		float Q4;
+		float Q5;
+		float Q6;
+	};
+
 private:
 	FString LocalIP;
 	int32 LocalPort;
@@ -31,6 +47,11 @@ private:
 
 	TArray<uint8> ReceivedData;
 
+	UStaticMeshComponent* Joints[6];
+
 	void InitializeSocket();
-	void ReadSocket();
+	FString ReadSocket();
+	Coordinates ParseCoordinates(FString stream);
+	// JointAngles IKSolver(Coordinates);
+	void RotateJoints(JointAngles angles);
 };
