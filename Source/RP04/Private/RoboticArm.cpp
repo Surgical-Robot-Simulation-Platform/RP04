@@ -3,7 +3,6 @@
 
 #include "RoboticArm.h"
 
-#include "tiff.h"
 #include "Common/UdpSocketBuilder.h"
 
 
@@ -86,7 +85,7 @@ FString ARoboticArm::ReadSocket()
 }
 
 
-ARoboticArm::Coordinates ARoboticArm::ParseCoordinates(FString stream)
+FVector ARoboticArm::ParseCoordinates(FString stream)
 {
 	int32 OpenParenIdx = stream.Find(TEXT("("), ESearchCase::IgnoreCase, ESearchDir::FromStart,
 	                                 stream.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart) + 1);
@@ -105,29 +104,39 @@ ARoboticArm::Coordinates ARoboticArm::ParseCoordinates(FString stream)
 	float X = FCString::Atof(*XYZComponents[0]) * 100;
 	float Y = FCString::Atof(*XYZComponents[1]) * 100;
 	float Z = FCString::Atof(*XYZComponents[2]) * 100;
-	Coordinates Coords = {X, Y, Z};
 	UE_LOG(LogTemp, Warning, TEXT("Parsed coordinates: %f %f %f"), X, Y, Z);
-	return Coords;
+	return FVector(X, Y, X);
 }
 
-// ARoboticArm::JointAngles IKSolver(ARoboticArm::Coordinates coordinates)
+// void ARoboticArm::MoveEndEffector(FVector DesiredPosition)
 // {
-//}
 
-void ARoboticArm::RotateJoints(JointAngles angles)
+// }
+
+
+void ARoboticArm::SetJointConfig(float Q1, float Q2, float Q3, float Q4, float Q5, float Q6)
 {
-}
+	FRotator Q1_rotate, Q2_rotate, Q3_rotate, Q4_rotate, Q5_rotate, Q6_rotate;
 
+
+	Q1_rotate = FRotator(Joints[0]->GetRelativeRotation().Pitch, Q1, Joints[0]->GetRelativeRotation().Roll);
+	Q2_rotate = FRotator(Q2, Joints[1]->GetRelativeRotation().Yaw, Joints[1]->GetRelativeRotation().Roll);
+	Q3_rotate = FRotator(Joints[2]->GetRelativeRotation().Pitch, Q3,
+	                     Joints[2]->GetRelativeRotation().Roll);
+	Q4_rotate = FRotator(Q4, Joints[3]->GetRelativeRotation().Yaw, Joints[3]->GetRelativeRotation().Roll);
+	Q5_rotate = FRotator(Q5, Joints[4]->GetRelativeRotation().Yaw, Joints[4]->GetRelativeRotation().Roll);
+	Q6_rotate = FRotator(Q6, Joints[5]->GetRelativeRotation().Yaw, Joints[5]->GetRelativeRotation().Roll);
+
+	const FRotator Rotations[6] = {Q1_rotate, Q2_rotate, Q3_rotate, Q4_rotate, Q5_rotate, Q6_rotate};
+	for (int i = 0; i < 6; i++)
+	{
+		Joints[i]->SetRelativeRotation(Rotations[i]);
+	}
+}
 
 // Called every frame
 void ARoboticArm::Tick(float DeltaTime)
 {
 	FString coordinates = ReadSocket();
-	if (coordinates != "")
-	{
-		Coordinates ParsedCoordinates = ParseCoordinates(coordinates);
-		//JointAngles SolvedAngles = IKSolver(ParsedCoordinates);
-		//RotateJoints(SolvedAngles);
-	}
 	Super::Tick(DeltaTime);
 }

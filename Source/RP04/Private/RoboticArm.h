@@ -23,12 +23,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	struct Coordinates
-	{
-		float X;
-		float Y;
-		float Z;
-	};
+	// Define robotic arm constraints and measurement
+	const TArray<FString> JOINT_AXES = {"Y", "Y", "Y", "Y", "Y", "Y"};
 
 	struct JointAngles
 	{
@@ -39,6 +35,8 @@ public:
 		float Q5;
 		float Q6;
 	};
+
+	// void MoveEndEffector(FVector DesiredPosition);
 
 private:
 	FString LocalIP;
@@ -51,7 +49,7 @@ private:
 
 	void InitializeSocket();
 	FString ReadSocket();
-	Coordinates ParseCoordinates(FString stream);
-	// JointAngles IKSolver(Coordinates);
-	void RotateJoints(JointAngles angles);
+	FVector ParseCoordinates(FString stream);
+
+	void SetJointConfig(float Q1, float Q2, float Q3, float Q4, float Q5, float Q6);
 };
