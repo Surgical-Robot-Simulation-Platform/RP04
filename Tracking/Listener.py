@@ -1,5 +1,6 @@
-import socket
 import pickle
+import socket
+import sys
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -9,14 +10,15 @@ PORT = 12347
 s.bind((IP, PORT))
 
 while True:
-    # Get data from sender - 4096 is buffer size
-    data, address = s.recvfrom(4096)
+    try:
+        # Get data from sender - 4096 is buffer size
+        data, address = s.recvfrom(4096)
 
-    # Deserialize the data using pickle
-    deserialized_data = pickle.loads(data)
+        # Deserialize the data using pickle
+        deserialized_data = pickle.loads(data)
 
-    # Print the received data
-    print(deserialized_data)
-
-
-s.close()
+        # Print the received data
+        print(deserialized_data)
+    except KeyboardInterrupt:
+        s.close()
+        sys.exit()
