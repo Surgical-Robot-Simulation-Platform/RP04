@@ -53,10 +53,12 @@ while True:
             # Update the dictionary with the marker information.
             for id in ids:
                 marker_data[int(id)] = (distance, (x, y, z))
+                msg = "{}{}: ({}, ({}, {}, {})){}".format("{", int(id), distance, x, y, z, "}")
+                print(msg)
                 serialized_data = pickle.dumps(marker_data)  # serialize our marker data so we can send with a socket
-                s.sendto(serialized_data, (IP, PORT))  # send the serialized data to the defined IP & PORT(Mike's shit)
+                s.sendto(msg.encode(), (IP, PORT))  # send the serialized data to the defined IP & PORT(Mike's shit)
                 print(
-                    id)  # Occaisionally, marker # 34 or 37 will be picked up by the listener script, but it isn't printed out here...
+                    marker_data)  # Occaisionally, marker # 34 or 37 will be picked up by the listener script, but it isn't printed out here...
 
             # Draw the Aruco marker on the frame.
             frame = aruco.drawDetectedMarkers(frame, corners, ids)
