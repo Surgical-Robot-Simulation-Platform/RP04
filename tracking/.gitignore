@@ -160,4 +160,9 @@ Plugins/*/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
+/calibration_images/*.jpg
+/calibration_images/*.png
+/calibration_images/*.jpeg
+*.npy
+
 # End of https://mrkandreev.name/snippets/gitignore-generator/#C++,macOS,Windows,UnrealEngine
