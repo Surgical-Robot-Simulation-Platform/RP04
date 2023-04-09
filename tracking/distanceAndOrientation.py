@@ -1,4 +1,4 @@
-import pickle
+import json
 import socket
 import sys
 
@@ -39,7 +39,7 @@ s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Define the IP address and port of the receiver (for the socket shit)
 IP = "127.0.0.1"
-PORT = 12347
+PORT = 16000
 
 # Set the camera calibration parameters.
 # Loading the camera matrix and distortion coefficients
@@ -71,8 +71,9 @@ while True:
                 # Update the dictionary with the marker information.
                 marker_data[int(ids[i])] = (distance, (x, y, z), (pitch, yaw, roll))
                 # Send data over UDP socket
-                serialized_data = pickle.dumps(marker_data)
-                s.sendto(serialized_data, (IP, PORT))
+                print(marker_data)
+                serialized_data = json.dumps(marker_data)
+                s.sendto(serialized_data.encode(), (IP, PORT))
                 # print(marker_data)
 
                 # Draw the Aruco marker on the frame.
@@ -93,7 +94,8 @@ while True:
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             raise KeyboardInterrupt
-    except:
+    except KeyboardInterrupt:
+        print("Closing tracking system gracefully.")
         # When everything is done, release the capture
         cap.release()
         cv2.destroyAllWindows()
