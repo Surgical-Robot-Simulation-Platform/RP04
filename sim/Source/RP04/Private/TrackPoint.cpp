@@ -3,6 +3,8 @@
 
 #include "TrackPoint.h"
 
+#include "Json.h"
+#include "JsonUtilities.h"
 #include "Common/UdpSocketBuilder.h"
 
 // Sets default values
@@ -14,8 +16,8 @@ ATrackPoint::ATrackPoint()
 // Called when the game starts or when spawned
 void ATrackPoint::BeginPlay()
 {
-	Sphere = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("Sphere")));
-	if (!Sphere)
+	Point = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("Sphere")));
+	if (!Point)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Could not find point."));
 		return;
@@ -33,7 +35,7 @@ void ATrackPoint::BeginPlay()
 void ATrackPoint::InitializeSocket()
 {
 	LocalIP = TEXT("127.0.0.1");
-	LocalPort = 12347;
+	LocalPort = 16000;
 	FIPv4Address IPv4Address;
 	FIPv4Address::Parse(LocalIP, IPv4Address);
 	ListenerSocket = FUdpSocketBuilder(TEXT("ListenerSocket"))
@@ -72,32 +74,79 @@ FString ATrackPoint::ReadSocket()
 	return FString();
 }
 
-FVector ATrackPoint::ParseCoordinates(FString stream)
+void ATrackPoint::MovePoint(FString stream)
 {
-	int32 OpenParenIdx = stream.Find(TEXT("("), ESearchCase::IgnoreCase, ESearchDir::FromStart,
-	                                 stream.Find(TEXT(","), ESearchCase::IgnoreCase, ESearchDir::FromStart) + 1);
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(stream);
 
-	// Get the index of the last close parenthesis
-	int32 CloseParenIdx = stream.Find(TEXT(")"), ESearchCase::IgnoreCase, ESearchDir::FromStart);
+	if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
+	{
+		for (auto& JsonElem : JsonObject->Values)
+		{
+			FString Key = JsonElem.Key;
+			TSharedPtr<FJsonValue> JsonValue = JsonElem.Value;
+			float x, y, z;
+			float x_rot, y_rot, z_rot;
+			int count = 0;
+			if (JsonValue->Type == EJson::Array)
+			{
+				TArray<TSharedPtr<FJsonValue>> ArrayValue = JsonValue->AsArray();
 
-	// Get the sub-string between the open and close parentheses
-	FString XYZString = stream.Mid(OpenParenIdx + 1, CloseParenIdx - OpenParenIdx - 1);
+				// Extract each sequence of values between the '[' and ']' characters.
+				for (auto& ArrayElem : ArrayValue)
+				{
+					if (ArrayElem->Type == EJson::Array)
+					{
+						TArray<TSharedPtr<FJsonValue>> InnerArrayValue = ArrayElem->AsArray();
 
-	// Split the string on commas to get the x, y, and z values as separate strings
-	TArray<FString> XYZComponents;
-	XYZString.ParseIntoArray(XYZComponents, TEXT(","), true);
-
-	// Convert the strings to floats, convert from metres to cm
-	float X = FCString::Atof(*XYZComponents[0]) * 100;
-	float Y = FCString::Atof(*XYZComponents[1]) * 100;
-	float Z = FCString::Atof(*XYZComponents[2]) * 100;
-	UE_LOG(LogTemp, Warning, TEXT("Parsed coordinates: %f %f %f"), X, Y, Z);
-	return FVector(X, Y, X);
-}
-
-void ATrackPoint::MovePoint(FVector coords)
-{
-	Sphere->SetRelativeLocation(coords);
+						// Do something with the sequence of values.
+						for (auto& InnerArrayElem : InnerArrayValue)
+						{
+							if (InnerArrayElem->Type == EJson::Number)
+							{
+								float Value = InnerArrayElem->AsNumber();
+								if (count == 0)
+								{
+									x = Value;
+								}
+								else if (count == 1)
+								{
+									y = Value;
+								}
+								else if (count == 2)
+								{
+									z = Value;
+								}
+								else if (count == 3)
+								{
+									x_rot = Value;
+								}
+								else if (count == 4)
+								{
+									y_rot = Value;
+								}
+								else if (count == 5)
+								{
+									z_rot = Value;
+								}
+							}
+							count++;
+							if (count == 6)
+							{
+								UE_LOG(LogTemp, Warning, TEXT("Position: %f, %f, %f\tRotation: %f, %f, %f"), x, y, z,
+								       x_rot,
+								       y_rot, z_rot);
+								FVector pos(x * 200, y * 200, z * 200);
+								FRotator rot(x_rot, y_rot, z_rot);
+								Point->SetRelativeLocationAndRotation(pos, rot);
+								return;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -107,8 +156,19 @@ void ATrackPoint::Tick(float DeltaTime)
 	FString coordinates = ReadSocket();
 	if (!coordinates.IsEmpty())
 	{
-		FVector coords = ParseCoordinates(coordinates);
-		MovePoint(coords);
+		MovePoint(coordinates);
 	}
 	Super::Tick(DeltaTime);
+}
+
+void ATrackPoint::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	// Close the socket connection when the simulation stops
+	if (ListenerSocket != nullptr)
+	{
+		ListenerSocket->Close();
+		UE_LOG(LogTemp, Warning, TEXT("Socket has been closed."));
+	}
+	else UE_LOG(LogTemp, Warning, TEXT("Socket did not close."))
 }

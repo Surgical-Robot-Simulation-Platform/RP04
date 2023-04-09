@@ -19,6 +19,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -29,10 +31,8 @@ private:
 	FSocket* ListenerSocket;
 	TArray<uint8> ReceivedData;
 
-	UStaticMeshComponent* Sphere;
+	UStaticMeshComponent* Point;
 	void InitializeSocket();
 	FString ReadSocket();
-	FVector ParseCoordinates(FString stream);
-
-	void MovePoint(FVector coords);
+	void MovePoint(FString stream);
 };
