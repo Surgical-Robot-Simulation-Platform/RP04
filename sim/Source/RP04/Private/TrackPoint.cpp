@@ -17,7 +17,7 @@ ATrackPoint::ATrackPoint()
 void ATrackPoint::BeginPlay()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
+	SetActorRotation(FRotator(90.0f, 0.0f, 0.0f));
 	SetActorLocation(FVector(0.0f, 0.0f, 35.0f));
 	InitializeSocket();
 	if (ListenerSocket)
@@ -81,7 +81,7 @@ TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 
 		UE_LOG(LogTemp, Log, TEXT("Scaled coordinates (%f, %f, %f)"), X, Y, Z);
 		FVector pos = FVector(X, Y, Z);
-		FRotator rot(Pitch, Yaw, Roll);
+		FRotator rot = FRotator(Pitch, Yaw, Roll);
 		return TTuple<FVector, FRotator>(pos, rot);
 	}
 	return TTuple<FVector, FRotator>(GetActorLocation(), GetActorRotation());
@@ -89,38 +89,14 @@ TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 
 FVector ATrackPoint::ClampCoordinates(FVector coordinates)
 {
-	const float maxRadius = 110.0f;
-	const float maxHeight = 195.0f;
-	const FVector center(55.0f, 55.0f, 115.0f);
-
-	FVector delta = coordinates - center;
-	float distance = delta.Size();
-	float height = FMath::Clamp(delta.Z, 0.0f, maxHeight);
-
-	if (distance <= maxRadius)
-	{
-		return coordinates;
-	}
-
-	FVector clampedDelta = delta * (maxRadius / distance);
-	clampedDelta.Z = height;
-
-	return center + clampedDelta;
+	return coordinates;
 }
 
 
 // Called every frame
 void ATrackPoint::Tick(float DeltaTime)
 {
-	const FString coordinates = ReadSocket();
-	if (!coordinates.IsEmpty())
-	{
-		TTuple<FVector, FRotator> data = ParseCoordinates(coordinates);
-		SetActorLocation(ClampCoordinates(data.Get<0>()));
-		SetActorRotation(data.Get<1>());
-	}
-
-	Super::Tick(DeltaTime);
+	
 }
 
 void ATrackPoint::EndPlay(const EEndPlayReason::Type EndPlayReason)
