@@ -1,4 +1,4 @@
-import socket
+import socket  # Import the socket library
 import sys
 
 import cv2
@@ -9,7 +9,7 @@ ARUCO_DICT = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
 ARUCO_PARAMETERS = cv2.aruco.DetectorParameters_create()
 CAMERA_MATRIX = np.load('camera_matrix.npy')
 DIST_COEFFS = np.load('dist_coeffs.npy')
-PERPENDICULAR_DISTANCE = 1  # 10 cm
+PERPENDICULAR_DISTANCE = 0.1  # 10 cm
 
 # UDP socket configuration
 IP = "127.0.0.1"  # Replace with the IP address you want to send the data to
@@ -17,11 +17,12 @@ PORT = 12347
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Create a UDP socket
 marker_data = []
 
+previous_smoothed_imaginary_point = np.zeros((3, 1))
+
 
 def main():
+    cap = cv2.VideoCapture(0)
     try:
-        cap = cv2.VideoCapture(0)
-
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -40,13 +41,20 @@ def main():
 
                         x, y, z = imaginary_point[0][0], imaginary_point[1][0], imaginary_point[2][0]
 
+                        global previous_smoothed_imaginary_point
+                        x_filtered = exponential_moving_average(x, previous_smoothed_imaginary_point[0][0], 0.1)
+                        y_filtered = exponential_moving_average(y, previous_smoothed_imaginary_point[1][0], 0.1)
+                        z_filtered = exponential_moving_average(z, previous_smoothed_imaginary_point[2][0], 0.1)
+
+                        previous_smoothed_imaginary_point = np.array([[x_filtered], [y_filtered], [z_filtered]])
+
                         R, _ = cv2.Rodrigues(rvec)
                         euler_angles = rotation_matrix_to_euler_angles(R)
                         pitch, yaw, roll = euler_angles
 
                         # Send the data through the UDP socket
-                        marker_data = f"{x} {y} {z} {pitch} {yaw} {roll}"
-                        print(marker_data)
+                        marker_data = f"{x_filtered} {y_filtered} {z_filtered} {pitch} {yaw} {roll}"
+
                         # Send data over UDP socket
                         serialized_data = marker_data.encode()
                         s.sendto(serialized_data, (IP, PORT))
@@ -54,15 +62,19 @@ def main():
 
             cv2.imshow('frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                raise KeyboardInterrupt
-    except KeyboardInterrupt:
+                break
+    except:
         # When everything is done, release the capture
         cap.release()
         cv2.destroyAllWindows()
-        # Close socket w/UDP shit
+        # Close socket
         s.close()
         print("Closing tracking system gracefully.")
         sys.exit()
+
+
+def exponential_moving_average(value, previous_value, alpha):
+    return alpha * value + (1 - alpha) * previous_value
 
 
 def get_imaginary_point(distance, rvec, tvec):
