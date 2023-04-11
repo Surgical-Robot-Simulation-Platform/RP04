@@ -81,7 +81,7 @@ TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 
 		UE_LOG(LogTemp, Log, TEXT("Scaled coordinates (%f, %f, %f)"), X, Y, Z);
 		FVector pos = FVector(X, Y, Z);
-		FRotator rot = FRotator(Pitch, Yaw, Roll);
+		FRotator rot = FRotator(Pitch, Roll, Yaw);
 		return TTuple<FVector, FRotator>(pos, rot);
 	}
 	return TTuple<FVector, FRotator>(GetActorLocation(), GetActorRotation());
@@ -96,7 +96,15 @@ FVector ATrackPoint::ClampCoordinates(FVector coordinates)
 // Called every frame
 void ATrackPoint::Tick(float DeltaTime)
 {
-	
+	const FString coordinates = ReadSocket();
+	if (!coordinates.IsEmpty())
+	{
+		TTuple<FVector, FRotator> data = ParseCoordinates(coordinates);
+		SetActorLocation(ClampCoordinates(data.Get<0>()));
+		SetActorRotation(data.Get<1>());
+	}
+
+	Super::Tick(DeltaTime);
 }
 
 void ATrackPoint::EndPlay(const EEndPlayReason::Type EndPlayReason)
