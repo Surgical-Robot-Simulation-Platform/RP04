@@ -16,15 +16,7 @@ ATrackPoint::ATrackPoint()
 // Called when the game starts or when spawned
 void ATrackPoint::BeginPlay()
 {
-	Point = Cast<UStaticMeshComponent>(GetDefaultSubobjectByName(TEXT("Sphere")));
-	if (!Point)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Could not find point."));
-		return;
-	}
-
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	UE_LOG(LogTemp, Warning, TEXT("Track point found.."));
 	InitializeSocket();
 	if (ListenerSocket)
 	{
@@ -138,7 +130,8 @@ void ATrackPoint::MovePoint(FString stream)
 								       y_rot, z_rot);
 								FVector pos(x * 200, y * 200, z * 200);
 								FRotator rot(x_rot, y_rot, z_rot);
-								Point->SetRelativeLocationAndRotation(pos, rot);
+								SetActorRelativeLocation(pos);
+								SetActorRelativeRotation(rot);
 								return;
 							}
 						}
