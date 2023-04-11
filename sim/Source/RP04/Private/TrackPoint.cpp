@@ -81,7 +81,7 @@ TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 
 		UE_LOG(LogTemp, Log, TEXT("Scaled coordinates (%f, %f, %f)"), X, Y, Z);
 		FVector pos = FVector(X, Y, Z);
-		FRotator rot = FRotator(Pitch, Roll, Yaw);
+		FRotator rot = FRotator(Pitch, Yaw, Roll);
 		return TTuple<FVector, FRotator>(pos, rot);
 	}
 	return TTuple<FVector, FRotator>(GetActorLocation(), GetActorRotation());
