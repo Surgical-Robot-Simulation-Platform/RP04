@@ -30,9 +30,11 @@ private:
 	int32 LocalPort;
 	FSocket* ListenerSocket;
 	TArray<uint8> ReceivedData;
+	FVector proposedCoordinates;
 
 	UStaticMeshComponent* Point;
 	void InitializeSocket();
 	FString ReadSocket();
-	void MovePoint(FString stream);
+	TTuple<FVector, FRotator> ParseCoordinates(FString stream);
+	FVector ClampCoordinates(FVector coordinates);
 };

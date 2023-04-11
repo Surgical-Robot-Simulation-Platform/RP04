@@ -17,6 +17,8 @@ ATrackPoint::ATrackPoint()
 void ATrackPoint::BeginPlay()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
+	SetActorLocation(FVector(0.0f, 0.0f, 35.0f));
 	InitializeSocket();
 	if (ListenerSocket)
 	{
@@ -58,99 +60,66 @@ FString ATrackPoint::ReadSocket()
 		if (BytesRead > 0)
 		{
 			FString Data = FString(BytesRead, (char*)ReceivedData.GetData());
-			UE_LOG(LogTemp, Warning, TEXT("Received %d bytes of data: %s"), BytesRead,
-			       *Data);
 			return Data;
 		}
 	}
 	return FString();
 }
 
-void ATrackPoint::MovePoint(FString stream)
+TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 {
-	TSharedPtr<FJsonObject> JsonObject;
-	TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(stream);
-
-	if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
+	TArray<FString> MessageParts;
+	stream.ParseIntoArray(MessageParts, TEXT(" "), true);
+	if (MessageParts.Num() == 6)
 	{
-		for (auto& JsonElem : JsonObject->Values)
-		{
-			FString Key = JsonElem.Key;
-			TSharedPtr<FJsonValue> JsonValue = JsonElem.Value;
-			float x, y, z;
-			float x_rot, y_rot, z_rot;
-			int count = 0;
-			if (JsonValue->Type == EJson::Array)
-			{
-				TArray<TSharedPtr<FJsonValue>> ArrayValue = JsonValue->AsArray();
+		float X = FCString::Atof(*MessageParts[0]) * 50;
+		float Y = FCString::Atof(*MessageParts[1]) * 50;
+		float Z = FCString::Atof(*MessageParts[2]) * 35;
+		float Pitch = FCString::Atof(*MessageParts[3]);
+		float Yaw = FCString::Atof(*MessageParts[4]);
+		float Roll = FCString::Atof(*MessageParts[5]);
 
-				// Extract each sequence of values between the '[' and ']' characters.
-				for (auto& ArrayElem : ArrayValue)
-				{
-					if (ArrayElem->Type == EJson::Array)
-					{
-						TArray<TSharedPtr<FJsonValue>> InnerArrayValue = ArrayElem->AsArray();
-
-						// Do something with the sequence of values.
-						for (auto& InnerArrayElem : InnerArrayValue)
-						{
-							if (InnerArrayElem->Type == EJson::Number)
-							{
-								float Value = InnerArrayElem->AsNumber();
-								if (count == 0)
-								{
-									x = Value;
-								}
-								else if (count == 1)
-								{
-									y = Value;
-								}
-								else if (count == 2)
-								{
-									z = Value;
-								}
-								else if (count == 3)
-								{
-									x_rot = Value;
-								}
-								else if (count == 4)
-								{
-									y_rot = Value;
-								}
-								else if (count == 5)
-								{
-									z_rot = Value;
-								}
-							}
-							count++;
-							if (count == 6)
-							{
-								UE_LOG(LogTemp, Warning, TEXT("Position: %f, %f, %f\tRotation: %f, %f, %f"), x, y, z,
-								       x_rot,
-								       y_rot, z_rot);
-								FVector pos(x * 200, y * 200, z * 200);
-								FRotator rot(x_rot, y_rot, z_rot);
-								SetActorRelativeLocation(pos);
-								SetActorRelativeRotation(rot);
-								return;
-							}
-						}
-					}
-				}
-			}
-		}
+		UE_LOG(LogTemp, Log, TEXT("Scaled coordinates (%f, %f, %f)"), X, Y, Z);
+		FVector pos = FVector(X, Y, Z);
+		FRotator rot(Pitch, Yaw, Roll);
+		return TTuple<FVector, FRotator>(pos, rot);
 	}
+	return TTuple<FVector, FRotator>(GetActorLocation(), GetActorRotation());
+}
+
+FVector ATrackPoint::ClampCoordinates(FVector coordinates)
+{
+	const float maxRadius = 110.0f;
+	const float maxHeight = 195.0f;
+	const FVector center(55.0f, 55.0f, 115.0f);
+
+	FVector delta = coordinates - center;
+	float distance = delta.Size();
+	float height = FMath::Clamp(delta.Z, 0.0f, maxHeight);
+
+	if (distance <= maxRadius)
+	{
+		return coordinates;
+	}
+
+	FVector clampedDelta = delta * (maxRadius / distance);
+	clampedDelta.Z = height;
+
+	return center + clampedDelta;
 }
 
 
 // Called every frame
 void ATrackPoint::Tick(float DeltaTime)
 {
-	FString coordinates = ReadSocket();
+	const FString coordinates = ReadSocket();
 	if (!coordinates.IsEmpty())
 	{
-		MovePoint(coordinates);
+		TTuple<FVector, FRotator> data = ParseCoordinates(coordinates);
+		SetActorLocation(ClampCoordinates(data.Get<0>()));
+		SetActorRotation(data.Get<1>());
 	}
+
 	Super::Tick(DeltaTime);
 }
 
