@@ -163,6 +163,7 @@ DerivedDataCache/*
 /calibration_images/*.jpg
 /calibration_images/*.png
 /calibration_images/*.jpeg
+*.png
 *.npy
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#C++,macOS,Windows,UnrealEngine
