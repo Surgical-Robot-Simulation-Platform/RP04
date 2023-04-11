@@ -17,8 +17,8 @@ ATrackPoint::ATrackPoint()
 void ATrackPoint::BeginPlay()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	SetActorRotation(FRotator(90.0f, 0.0f, 0.0f));
-	SetActorLocation(FVector(0.0f, 0.0f, 35.0f));
+	SetActorRelativeRotation(FRotator(90.0f, 0.0f, 0.0f));
+	SetActorRelativeLocation(FVector(0.0f, 0.0f, 35.0f));
 	InitializeSocket();
 	if (ListenerSocket)
 	{
