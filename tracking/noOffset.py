@@ -25,7 +25,7 @@ aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
 params = aruco.DetectorParameters_create()
 
 # Initialize the camera capture.
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 # Create a dictionary to store the distance and coordinates for each marker.
 marker_data = {}
