@@ -72,9 +72,13 @@ TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
 	stream.ParseIntoArray(MessageParts, TEXT(" "), true);
 	if (MessageParts.Num() == 6)
 	{
-		float X = FCString::Atof(*MessageParts[0]) * 50;
-		float Y = FCString::Atof(*MessageParts[1]) * 50;
-		float Z = FCString::Atof(*MessageParts[2]) * 35;
+		float X = FCString::Atof(*MessageParts[0]) * 100;
+		float Y = FCString::Atof(*MessageParts[1]) * 100;
+		float Z = FCString::Atof(*MessageParts[2]) * 100;
+
+		Z = FMath::Abs(Z - 120);
+		
+		
 		float Pitch = FCString::Atof(*MessageParts[3]);
 		float Yaw = FCString::Atof(*MessageParts[4]);
 		float Roll = FCString::Atof(*MessageParts[5]);
