@@ -35,6 +35,5 @@ private:
 	UStaticMeshComponent* Point;
 	void InitializeSocket();
 	FString ReadSocket();
-	TTuple<FVector, FRotator> ParseCoordinates(FString stream);
-	FVector ClampCoordinates(FVector coordinates);
+	FVector ParseCoordinates(FString stream);
 };

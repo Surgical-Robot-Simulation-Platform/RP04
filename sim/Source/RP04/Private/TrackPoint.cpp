@@ -64,31 +64,21 @@ FString ATrackPoint::ReadSocket()
 	return FString();
 }
 
-TTuple<FVector, FRotator> ATrackPoint::ParseCoordinates(FString stream)
+FVector ATrackPoint::ParseCoordinates(FString stream)
 {
 	TArray<FString> MessageParts;
 	stream.ParseIntoArray(MessageParts, TEXT(" "), true);
-		float X = FCString::Atof(*MessageParts[0]) * 100;
-		float Y = FCString::Atof(*MessageParts[1]) * 100;
-		float Z = FCString::Atof(*MessageParts[2]) * 100;
-		X *= 1.7;
-		Y *= 1.3;
-		Z = FMath::Abs(Z - 160);
-		if (Z <35) Z = 35;
-		
-		
-		float Pitch = FCString::Atof(*MessageParts[3]);
-		float Yaw = FCString::Atof(*MessageParts[4]);
-		float Roll = FCString::Atof(*MessageParts[5]);
-
-		FVector pos = FVector(X, Y, Z);
-		FRotator rot = FRotator(Pitch, Yaw, Roll);
-		return TTuple<FVector, FRotator>(pos, rot);
-}
-
-FVector ATrackPoint::ClampCoordinates(FVector coordinates)
-{
-	return coordinates;
+	float X = FCString::Atof(*MessageParts[0]) * 1000;
+	float Y = FCString::Atof(*MessageParts[1]) * 1000;
+	float Z = FCString::Atof(*MessageParts[2]) * 200;
+	UE_LOG(LogTemp, Error, TEXT("%f %f %f"), X, Y, Z);
+	Z = FMath::Abs(Z - 150);
+	if (Z < 35)
+	{
+		Z = 35;
+	}
+	FVector pos = FVector(X, Y, Z);
+	return pos;
 }
 
 
@@ -98,8 +88,7 @@ void ATrackPoint::Tick(float DeltaTime)
 	const FString coordinates = ReadSocket();
 	if (!coordinates.IsEmpty())
 	{
-		TTuple<FVector, FRotator> data = ParseCoordinates(coordinates);
-		SetActorLocation(ClampCoordinates(data.Get<0>()));
+		SetActorRelativeLocation(ParseCoordinates(coordinates));
 	}
 
 	Super::Tick(DeltaTime);
